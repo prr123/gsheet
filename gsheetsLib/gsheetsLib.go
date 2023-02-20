@@ -31,6 +31,7 @@ type GSheetsObj  struct {
     Ctx context.Context
     GdSvc *drive.Service
     GshSvc *sheets.Service
+	GspSheet *sheets.Spreadsheet
 }
 
 type cred struct {
@@ -118,7 +119,53 @@ func InitGSheets() (gsh *GSheetsObj, err error){
     return &gshObj, nil
 }
 
-func PrintGetSheet() {
 
-	fmt.Println("get sheet success!")
+func (gs *GSheetsObj) GetSpreadsheet(spSheetId string) (err error){
+
+	svc := gs.GshSvc
+
+    spSheet, err := svc.Spreadsheets.Get(spSheetId).Do()
+	if err != nil {return fmt.Errorf("could not open spreadsheet!")}
+	gs.GspSheet = spSheet
+	return nil
 }
+
+func (gs *GSheetsObj) ReadSpreadSheet() (err error){
+
+//	spSheet := gs.GspSheet
+	return nil
+}
+
+func PrintSheetInfo(spSheet *sheets.Spreadsheet) {
+
+	prop:= spSheet.Properties
+	fmt.Printf("Title:  %s\n", prop.Title)
+	fmt.Printf("Id:     %s\n", spSheet.SpreadsheetId)
+	fmt.Printf("sheets: %d\n", len(spSheet.Sheets))
+
+	fmt.Printf("\nSpreadsheet Properties\n")
+	fmt.Printf("  theme font:  %s\n",prop.SpreadsheetTheme.PrimaryFontFamily)
+	fmt.Printf("  theme colors: %d\n", len(prop.SpreadsheetTheme.ThemeColors))
+	for i:=0; i< len(prop.SpreadsheetTheme.ThemeColors); i++ {
+		fmt.Printf("theme colors [%d]: \n", i)
+		colPair:= prop.SpreadsheetTheme.ThemeColors[i]
+		rgb:= colPair.Color.RgbColor
+		fmt.Printf("    type: %s\n",colPair.ColorType)
+		fmt.Printf("    style: %s\n", colPair.Color.ThemeColor)
+		fmt.Printf("    color: alpha %.1f red %.1f green %.1f blue %.1f\n",rgb.Alpha, rgb.Red, rgb.Green, rgb.Blue)
+	}
+
+
+	for i:=0; i< len(spSheet.Sheets); i++ {
+		sheet := spSheet.Sheets[i]
+		shProp := sheet.Properties
+		fmt.Printf("\n*** Sheet[%d]:\n", i+1)
+		fmt.Printf("  Name:  %s\n", shProp.Title)
+		fmt.Printf("  Id:    %d\n", shProp.SheetId)
+		fmt.Printf("  Type:  %s\n", shProp.SheetType)
+		fmt.Printf("  Index: %d\n", shProp.Index)
+	}
+
+	fmt.Println()
+}
+
