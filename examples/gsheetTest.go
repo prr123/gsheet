@@ -27,7 +27,7 @@ func main() {
 
 	sheetId := os.Args[1]
 
-	fmt.Printf("sheet Id: %s\n", sheetId)
+//	fmt.Printf("sheet Id: %s\n", sheetId)
 
 	gsheet,err := gsh.InitGSheets()
 	if err != nil {
@@ -35,8 +35,15 @@ func main() {
 		os.Exit(-1)
 	}
 
-	fmt.Printf("gsheet: %v\n", gsheet)
-	gsh.PrintGetSheet()
+	err = gsheet.GetSpreadsheet(sheetId)
+	if err != nil {
+		fmt.Printf("error GetSpreadSheet: %v\n", err)
+		os.Exit(-1)
+	}
+
+//	fmt.Printf("gsheet: %v\n", gsheet)
+
+	gsh.PrintSheetInfo(gsheet.GspSheet)
 
     fmt.Println("Success!")
     os.Exit(0)
