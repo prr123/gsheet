@@ -20,7 +20,7 @@ import (
 	"golang.org/x/oauth2"
 	"golang.org/x/oauth2/google"
 	"google.golang.org/api/option"
-//	"google.golang.org/api/googleapi"
+	"google.golang.org/api/googleapi"
 
 	"google.golang.org/api/drive/v3"
 	"google.golang.org/api/sheets/v4"
@@ -32,6 +32,7 @@ type GSheetsObj  struct {
     GdSvc *drive.Service
     GshSvc *sheets.Service
 	GspSheet *sheets.Spreadsheet
+	GspSheetData bool
 }
 
 type cred struct {
@@ -127,13 +128,117 @@ func (gs *GSheetsObj) GetSpreadsheet(spSheetId string) (err error){
     spSheet, err := svc.Spreadsheets.Get(spSheetId).Do()
 	if err != nil {return fmt.Errorf("could not open spreadsheet!")}
 	gs.GspSheet = spSheet
+	gs.GspSheetData = false
 	return nil
 }
 
-func (gs *GSheetsObj) ReadSpreadSheet() (err error){
 
-//	spSheet := gs.GspSheet
+func (gs *GSheetsObj) ReadGrid(spSheetId string) (err error){
+
+	svc := gs.GshSvc
+//	if (gs.GspSheet) == nil {return fmt.Errorf("no sheet provided!")}
+
+//	fields := "spreadsheetId,properties.title,sheets(properties,data.rowData.values(userEnteredValue,effectiveValue,formattedValue,note))"
+//    valObj, err = svc.Spreadsheets.Get(spSheetId, cellRange).Fields(fields).Do()
+//    valObj, err = svc.Spreadsheets.Get(spSheetId, cellRange).IncludeGridData(includeGridData bool).Do()
+    spSheet, err := svc.Spreadsheets.Get(spSheetId).IncludeGridData(true).Do()
+    if err != nil {return fmt.Errorf("could not open spreadsheet!")}
+
+	gs.GspSheet = spSheet
+	gs.GspSheetData = true
+
 	return nil
+}
+
+func (gs *GSheetsObj) ReadGridRange(spSheetId string, cellRange string) (err error){
+
+	svc := gs.GshSvc
+
+	fields := []googleapi.Field{"spreadsheetId","properties.title","sheets.properties","sheets.gridProperties"}
+
+//    fields := "spreadsheetId,properties.title,sheets(properties,data.rowData.values(userEnteredValue,effectiveValue,formattedValue,note))"
+//    valObj, err = svc.Spreadsheets.Get(spSheetId, cellRange).Fields(fields).Do()
+
+    spSheet, err := svc.Spreadsheets.Get(spSheetId).Fields(fields...).Ranges(cellRange).Do()
+    if err != nil {return fmt.Errorf("could not open spreadsheet!")}
+
+    gs.GspSheet = spSheet
+    gs.GspSheetData = true
+
+    return nil
+}
+
+
+
+func (gs *GSheetsObj) ReadCells(spSheetId string, cellRange string) (valObj *sheets.ValueRange, err error){
+
+	svc := gs.GshSvc
+
+//	rang:= "Sheet1!A1"
+    valObj, err = svc.Spreadsheets.Values.Get(spSheetId, cellRange).Do()
+    if err != nil {return nil, fmt.Errorf("could not open spreadsheet!")}
+
+	return valObj, nil
+}
+
+func PrintValueRange(valObj *sheets.ValueRange) {
+
+	fmt.Printf("Range: %s\n", valObj.Range)
+	fmt.Printf("values: %v len outer: %d\n", valObj.Values, len(valObj.Values))
+
+	for i:=0; i<len(valObj.Values); i++ {
+		cellVal := valObj.Values[i]
+		fmt.Printf("val [%d]: %d\n", i, len(cellVal))
+		for j:=0; j< len(cellVal); j++ {
+			fmt.Printf("value[%d][%d]: %s\n", i, j, cellVal[j])
+		}
+	}
+
+}
+
+func PrintSheetValues(spSheet *sheets.Spreadsheet) {
+
+	prop:= spSheet.Properties
+	fmt.Println("\n*** PrintSheetValues ***")
+	fmt.Printf("Title:  %s\n", prop.Title)
+
+
+	for ish:=0; ish < len(spSheet.Sheets); ish++ {
+		sheet := spSheet.Sheets[ish]
+		prop := sheet.Properties
+		if prop.GridProperties == nil {
+			fmt.Printf("sheet[%d]: no grid properties!", ish)
+			continue
+		}
+		fmt.Printf("sheet[%d]: rows: %d cols: %d \n", ish, prop.GridProperties.RowCount, prop.GridProperties.ColumnCount)
+
+		fmt.Printf("data items: %d\n", len(sheet.Data))
+		for i:=0; i< len(sheet.Data); i++ {
+			rows := sheet.Data[i]
+			fmt.Printf("  row[%d]: row %d col: %d num: %d\n", i, rows.StartRow, rows.StartColumn, len(rows.RowData))
+
+			for j:=0; j< len(rows.RowData); j++ {
+				rowDat := rows.RowData[j]
+				fmt.Printf("cellrow[%d-%d]: %d\n", i, j, len(rowDat.Values))
+
+				for k:=0; k< len(rowDat.Values); k++ {
+					cell := rowDat.Values[k]
+					cellVal := cell.EffectiveValue
+					fmt.Printf("cell [%d]: %s: ", k, cell.FormattedValue)
+					if cellVal.NumberValue != nil {
+						fmt.Printf("num: %f", k, *(cellVal.NumberValue))
+					}
+					if cellVal.StringValue != nil {
+						fmt.Printf("str: %s", *(cellVal.StringValue))
+					}
+					if cellVal.BoolValue != nil {
+						fmt.Printf("bool: %t", *(cellVal.BoolValue))
+					}
+					fmt.Println()
+				}
+			}
+		}
+	}
 }
 
 func PrintSheetInfo(spSheet *sheets.Spreadsheet) {
