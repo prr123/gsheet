@@ -150,17 +150,17 @@ func (gs *GSheetsObj) ReadGrid(spSheetId string) (err error){
 	return nil
 }
 
-func (gs *GSheetsObj) ReadGridRange(spSheetId string, cellRange string) (err error){
+func (gs *GSheetsObj) ReadGridRange(spSheetId string, cellRange *[]string) (err error){
 
 	svc := gs.GshSvc
 
-	fields := []googleapi.Field{"spreadsheetId","properties.title","sheets.properties","sheets.gridProperties"}
+	fields := []googleapi.Field{"spreadsheetId","properties.title","sheets.properties","sheets.data"}
 
 //    fields := "spreadsheetId,properties.title,sheets(properties,data.rowData.values(userEnteredValue,effectiveValue,formattedValue,note))"
 //    valObj, err = svc.Spreadsheets.Get(spSheetId, cellRange).Fields(fields).Do()
 
-    spSheet, err := svc.Spreadsheets.Get(spSheetId).Fields(fields...).Ranges(cellRange).Do()
-    if err != nil {return fmt.Errorf("could not open spreadsheet!")}
+    spSheet, err := svc.Spreadsheets.Get(spSheetId).Fields(fields...).Ranges(*cellRange...).Do()
+    if err != nil {return fmt.Errorf("could not get spreadsheet: %v!", err)}
 
     gs.GspSheet = spSheet
     gs.GspSheetData = true
