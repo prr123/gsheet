@@ -49,7 +49,7 @@ type credItems struct {
     ClientSecret string `json:"client_secret"`
     RedirectUris []string `json:"redirect_uris"`
 }
-// Retrieve a token, saves the token, then returns the generated client.
+
 
 // Retrieves a token from a local file.
 func tokenFromFile(file string) (*oauth2.Token, error) {
@@ -63,7 +63,7 @@ func tokenFromFile(file string) (*oauth2.Token, error) {
         return tok, err
 }
 
-
+// method that initializes the GSheetsObj and creates services for gdrive and sheets
 func InitGSheets() (gsh *GSheetsObj, err error){
 
     var cred cred
@@ -107,11 +107,6 @@ func InitGSheets() (gsh *GSheetsObj, err error){
 
     gshObj.GdSvc = gdsvc
 
-//    gdocsvc, err := docs.NewService(ctx, option.WithHTTPClient(client))
-//    if err != nil {return nil, fmt.Errorf("Unable to create Doc Service: %v!", err)}
-
-//    gdobj.GdocSvc = gdocsvc
-
     gsheetsvc, err := sheets.NewService(ctx, option.WithHTTPClient(client))
     if err != nil {return nil, fmt.Errorf("Unable to create Sheets Service: %v!", err)}
 
@@ -120,7 +115,8 @@ func InitGSheets() (gsh *GSheetsObj, err error){
     return &gshObj, nil
 }
 
-
+// method that returns a spreadsheet without the grid data
+// todo: combine with ReadGrid
 func (gs *GSheetsObj) GetSpreadsheet(spSheetId string) (err error){
 
 	svc := gs.GshSvc
@@ -133,14 +129,11 @@ func (gs *GSheetsObj) GetSpreadsheet(spSheetId string) (err error){
 }
 
 
+// method that returns a spreadsheet with all grid data
 func (gs *GSheetsObj) ReadGrid(spSheetId string) (err error){
 
 	svc := gs.GshSvc
-//	if (gs.GspSheet) == nil {return fmt.Errorf("no sheet provided!")}
 
-//	fields := "spreadsheetId,properties.title,sheets(properties,data.rowData.values(userEnteredValue,effectiveValue,formattedValue,note))"
-//    valObj, err = svc.Spreadsheets.Get(spSheetId, cellRange).Fields(fields).Do()
-//    valObj, err = svc.Spreadsheets.Get(spSheetId, cellRange).IncludeGridData(includeGridData bool).Do()
     spSheet, err := svc.Spreadsheets.Get(spSheetId).IncludeGridData(true).Do()
     if err != nil {return fmt.Errorf("could not open spreadsheet!")}
 
@@ -150,14 +143,12 @@ func (gs *GSheetsObj) ReadGrid(spSheetId string) (err error){
 	return nil
 }
 
+// method that reads a gridrange specified by the cellRanges
 func (gs *GSheetsObj) ReadGridRange(spSheetId string, cellRange *[]string) (err error){
 
 	svc := gs.GshSvc
 
 	fields := []googleapi.Field{"spreadsheetId","properties.title","sheets.properties","sheets.data"}
-
-//    fields := "spreadsheetId,properties.title,sheets(properties,data.rowData.values(userEnteredValue,effectiveValue,formattedValue,note))"
-//    valObj, err = svc.Spreadsheets.Get(spSheetId, cellRange).Fields(fields).Do()
 
     spSheet, err := svc.Spreadsheets.Get(spSheetId).Fields(fields...).Ranges(*cellRange...).Do()
     if err != nil {return fmt.Errorf("could not get spreadsheet: %v!", err)}
@@ -168,8 +159,8 @@ func (gs *GSheetsObj) ReadGridRange(spSheetId string, cellRange *[]string) (err 
     return nil
 }
 
-
-
+// methods that reads the content of all cells of the range 'cellRange' in a spreadsheet with id 'spSheetId'.
+//
 func (gs *GSheetsObj) ReadCells(spSheetId string, cellRange string) (valObj *sheets.ValueRange, err error){
 
 	svc := gs.GshSvc
@@ -181,6 +172,45 @@ func (gs *GSheetsObj) ReadCells(spSheetId string, cellRange string) (valObj *she
 	return valObj, nil
 }
 
+// method that creates a  new spreadsheet
+// todo: move file into a specified directory
+func (gs *GSheetsObj) CreateSpreadsheet(nspSheet *sheets.Spreadsheet) (err error){
+
+	svc := gs.GshSvc
+	ctx := gs.Ctx
+
+    spSheet, err := svc.Spreadsheets.Create(nspSheet).Context(ctx).Do()
+    if err != nil {return fmt.Errorf("could not create spreadsheet: %v!", err)}
+
+//	id := spSheet.SpreadsheetId
+	gs.GspSheet = spSheet
+
+//	gs.GspSheetData = true
+
+	return nil
+}
+
+// method that copies a spreadsheet to a new spreadsheet
+// todo: implement
+func (gs *GSheetsObj) CopySpreadsheet(dirId string) (err error){
+
+//	svc := gs.GshSvc
+
+	return nil
+}
+
+// method that fills the cells specified by ValueRange to a spredsheet
+func (gs *GSheetsObj) WriteCells(cellRange *sheets.ValueRange) (err error){
+
+//	svc := gs.GshSvc
+
+	return nil
+}
+
+
+
+// function that prints the contents of the cells specified in the value range
+// todo: make it into a method
 func PrintValueRange(valObj *sheets.ValueRange) {
 
 	fmt.Printf("Range: %s\n", valObj.Range)
@@ -196,6 +226,7 @@ func PrintValueRange(valObj *sheets.ValueRange) {
 
 }
 
+// function that prints the content of a spreadsheet
 func PrintSheetValues(spSheet *sheets.Spreadsheet) {
 
 	prop:= spSheet.Properties
@@ -241,6 +272,7 @@ func PrintSheetValues(spSheet *sheets.Spreadsheet) {
 	}
 }
 
+// function that prints the property information of a spreadsheet
 func PrintSheetInfo(spSheet *sheets.Spreadsheet) {
 
 	prop:= spSheet.Properties
