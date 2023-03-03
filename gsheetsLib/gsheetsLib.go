@@ -195,8 +195,83 @@ func (gs *GSheetsObj) CreateSpreadsheet(nspSheet *sheets.Spreadsheet) (err error
 func (gs *GSheetsObj) CopySpreadsheet(dirId string) (err error){
 
 //	svc := gs.GshSvc
+//	ctx := gs.Ctx
+
+//    spSheet, err := svc.Spreadsheets.Create(nspSheet).Context(ctx).Do()
+//    if err != nil {return fmt.Errorf("could not create spreadsheet: %v!", err)}
 
 	return nil
+}
+
+
+func (gs *GSheetsObj) UpdSheet(spshId string, updReq *sheets.BatchUpdateValuesRequest) (err error){
+
+	svc := gs.GshSvc
+	ctx := gs.Ctx
+
+	updResp, err := svc.Spreadsheets.Values.BatchUpdate(spshId, updReq).Context(ctx).Do()
+    if err != nil {return fmt.Errorf("could not update spreadsheet: %v!", err)}
+
+	for i:=0; i< len(updResp.Responses); i++ {
+		resp := updResp.Responses[i]
+		fmt.Printf(" resp[i]: %v/n",i, resp)
+	}
+
+	return nil
+}
+
+func (gs *GSheetsObj) UpdData(spshId string, wr string, valRang *sheets.ValueRange) (cellNum int, err error){
+
+//    var updReq sheets.BatchUpdateValuesRequest
+    svc := gs.GshSvc
+    ctx := gs.Ctx
+
+    updValResp, err := svc.Spreadsheets.Values.Update(spshId, wr, valRang).Context(ctx).ValueInputOption("RAW").Do()
+    if err != nil {return 0, fmt.Errorf("could not update values in spreadsheet: %v!", err)}
+
+	PrintUpdValResp(updValResp)
+
+    return int(updValResp.UpdatedCells), nil
+}
+
+func PrintUpdValResp(updValResp *sheets.UpdateValuesResponse) {
+
+	fmt.Printf("Spredsheet Id: %s\n", updValResp.SpreadsheetId)
+	fmt.Printf("  updated cells: %d\n", int(updValResp.UpdatedCells))
+	fmt.Printf("  updated range: %s\n", updValResp.UpdatedRange)
+
+	valAr := updValResp.UpdatedData
+	fmt.Printf("  updated values: %v\n",valAr)
+
+//	for i:= 0; i< len(updValResp.UpdatedData.Values); i++ {
+//		val := updValResp.UpdatedData.Values[i]
+//	}
+}
+
+func (gs *GSheetsObj) WriteData(spshId string, updReq *sheets.BatchUpdateValuesRequest) (cellNum int, err error){
+
+//    var updReq sheets.BatchUpdateValuesRequest
+/*
+    svc := gs.GshSvc
+    ctx := gs.Ctx
+
+    updResp, err := svc.Spreadsheets.Values.BatchUpdate(spshId, &updReq).Context(ctx).ValueInputOption("RAW").Do()
+    if err != nil {return 0, fmt.Errorf("could not update values in spreadsheet: %v!", err)}
+
+	PrintUpdResp(updResp)
+*/
+    return 0, nil
+
+}
+
+func PrintUpdResp(updResp *sheets.BatchUpdateValuesResponse) {
+
+	fmt.Printf("*** update responses [%d] ***\n", int(updResp.TotalUpdatedCells))
+	fmt.Printf("Spredsheet Id: %s\n", updResp.SpreadsheetId)
+    for i:=0; i< len(updResp.Responses); i++ {
+        resp := updResp.Responses[i]
+		fmt.Printf("  response[%d]: updated cells: %d\n", i, int(resp.UpdatedCells))
+    }
 }
 
 // method that fills the cells specified by ValueRange to a spredsheet
